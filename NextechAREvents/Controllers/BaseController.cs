@@ -31,7 +31,6 @@ namespace NextechAREvents.Controllers
         protected readonly IConfiguration _configuration;
         protected readonly ILogger<BaseController> _logger;
 
-        private readonly string _graphEndpoint;
         private readonly string _defaultOrganizerUserId;
         private readonly string _infernoAPIUrl;
         private readonly string _infernoAPIKey;
@@ -71,6 +70,8 @@ namespace NextechAREvents.Controllers
             try
             {
                 GraphServiceClient graphClient = GetGraphServiceClient(_tenantID, _clientId, _clientSecret);
+                if (graphClient == null)
+                    return null;
 
                 //Get Event From Inferno API and create, then create MSGraph Event and send Email invitation using MSGraph API
                 newEvent = await CreateEvent(graphClient, _hostEnv, _infernoAPIUrl, _infernoAPIKey, _defaultOrganizerUserId, eventId, recipients);
@@ -106,6 +107,8 @@ namespace NextechAREvents.Controllers
             try
             {
                 GraphServiceClient graphClient = GetGraphServiceClient(_tenantID, _clientId, _clientSecret);
+                if (graphClient == null)
+                    return null;
 
                 string eventId = curEvent.MSGraphEventId;
 
@@ -154,6 +157,8 @@ namespace NextechAREvents.Controllers
             try
             {
                 GraphServiceClient graphClient = GetGraphServiceClient(_tenantID, _clientId, _clientSecret);
+                if (graphClient == null)
+                    return false;
 
                 string eventId = curEvent.MSGraphEventId;
 
@@ -182,32 +187,46 @@ namespace NextechAREvents.Controllers
         /// <param name="eventId"></param>
         /// <param name="recipients"></param>
         /// <returns>The created MS Graph event</returns>
-        private static async Task<Event> CreateEvent(
+        private async Task<Event> CreateEvent(
             GraphServiceClient graphClient, IWebHostEnvironment hostEnv,
             string infernoAPIUrl, string infernoAPIKey, string defaultOrganizerUserId, 
             string eventId, string recipients)
         {
-            //TODO Check if the Event already exists in the DB for the recipients
+            Event createdEvent = null;
+            try
+            {
+                //TODO Check if the Event already exists in the DB for the recipients
 
-            User me = await graphClient.Users[defaultOrganizerUserId].Request().GetAsync();
+                User me = await graphClient.Users[defaultOrganizerUserId].Request().GetAsync();
+                if (me == null)
+                {
+                    throw new Exception("Unable to get the AzureAD User from the 'DefaultOrganizerUserId' declared in App Settings.");
+                } 
 
-            // Get InfernoEvent info from Inferno WebAPI
-            InfernoEventDTO infernoEvent = await GetInfernoEvent(infernoAPIUrl, infernoAPIKey, eventId);
-            if (infernoEvent == null)
-                return null;
+                // Get InfernoEvent info from Inferno WebAPI
+                InfernoEventDTO infernoEvent = await GetInfernoEvent(infernoAPIUrl, infernoAPIKey, eventId);
+                if (infernoEvent == null)
+                {
+                    throw new Exception("Unable to get the Event from InfernoAPI with 'InfernoAPIKey' declared in App Settings.");
+                }
 
-            //Construct a MSGraph Event from InfernoEvent
-            //string tzName = infernoEvent.startTime.GetTimeZoneStandardName();
-            Event newEvent = infernoEvent.ToMSGraphEvent();
+                //Construct a MSGraph Event from InfernoEvent
+                string tzName = infernoEvent.startTime.GetTimeZoneStandardName();
+                Event newEvent = infernoEvent.ToMSGraphEvent();
 
-            //Add default user and recipients as attendees to the MSGraph event
-            newEvent = AddAttendees(newEvent, recipients, me);
+                //Add default user and recipients as attendees to the MSGraph event
+                newEvent = AddAttendees(newEvent, recipients, me);
 
-            createdEvent = await graphClient.Users[defaultOrganizerUserId]
-                                            .Events
-                                            .Request()
-                                            //.Header("Prefer", $"outlook.timezone=\"UTC\"")
-                                            .AddAsync(newEvent);
+                createdEvent = await graphClient.Users[defaultOrganizerUserId]
+                                                .Events
+                                                .Request()
+                                                .Header("Prefer", $"outlook.timezone=\"{tzName}\"")
+                                                .AddAsync(newEvent);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.ToString());
+            }
 
             return createdEvent;
         }
@@ -221,15 +240,22 @@ namespace NextechAREvents.Controllers
         /// <param name="defaultOrganizerUserId"></param>
         /// <param name="recipients"></param>
         /// <param name="fromEmail"></param>
-        private static async Task SendEmail(
+        private async Task SendEmail(
              GraphServiceClient graphClient, IWebHostEnvironment hostEnv, Event newEvent, 
              string defaultOrganizerUserId, string recipients, string fromEmail)
         {
-            //Construct a MSGraph Email notification from current logged user and to all event attendees
-            var email = CreateMSGraphEmail(hostEnv, recipients, fromEmail, newEvent);
+            try
+            {
+                //Construct a MSGraph Email notification from current logged user and to all event attendees
+                var email = CreateMSGraphEmail(hostEnv, recipients, fromEmail, newEvent);
 
-            //Send email invitation to all event attendees using MSGraph
-            await graphClient.Users[defaultOrganizerUserId].SendMail(email, true).Request().PostAsync();
+                //Send email invitation to all event attendees using MSGraph
+                await graphClient.Users[defaultOrganizerUserId].SendMail(email, true).Request().PostAsync();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.ToString());
+            }
         }
 
         /// <summary>
@@ -238,16 +264,28 @@ namespace NextechAREvents.Controllers
         /// <param name="infernoAPIKey"></param>
         /// <param name="eventId"></param>
         /// <returns>InfernoEventDTO object</returns>
-        protected static async Task<InfernoEventDTO> GetInfernoEvent(string infernoAPIUrl, string infernoAPIKey, string eventId)
+        protected async Task<InfernoEventDTO> GetInfernoEvent(string infernoAPIUrl, string infernoAPIKey, string eventId)
         {
-            using (var httpClient = new HttpClient())
+            try
             {
-                httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + infernoAPIKey);
-                var response = await httpClient.GetAsync(infernoAPIUrl + eventId);
-                if (!response.IsSuccessStatusCode) return null;
-                string apiResponse = await response.Content.ReadAsStringAsync();
-                var infEvent = JsonConvert.DeserializeObject<InfernoEventDTO>(apiResponse);
-                return infEvent;
+                using (var httpClient = new HttpClient())
+                {
+                    httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + infernoAPIKey);
+                    var response = await httpClient.GetAsync(infernoAPIUrl + eventId);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _logger.LogError(response.ToString());
+                        return null;
+                    }
+                    string apiResponse = await response.Content.ReadAsStringAsync();
+                    var infEvent = JsonConvert.DeserializeObject<InfernoEventDTO>(apiResponse);
+                    return infEvent;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.ToString());
+                return null;
             }
         }
 
@@ -256,7 +294,7 @@ namespace NextechAREvents.Controllers
         /// </summary>
         /// <param name="tzName"></param>
         /// <returns>The MS Graph event</returns>
-        private static Event GetDefaultEventOnError(string tzName)
+        private Event GetDefaultEventOnError(string tzName)
         {
             Event newEvent = new Event
             {
@@ -289,39 +327,46 @@ namespace NextechAREvents.Controllers
         /// <param name="recipients"></param>
         /// <param name="me"></param>
         /// <returns>The MS Graph event</returns>
-        private static Event AddAttendees(Event newEvent, string recipients, User me)
+        private Event AddAttendees(Event newEvent, string recipients, User me)
         {
-            var attendees = new List<Attendee>();
-            attendees.Add(
-                new Attendee
-                {
-                    EmailAddress = new EmailAddress
-                    {
-                        Address = me.Mail,
-                        Name = me.DisplayName
-                    },
-                    Type = AttendeeType.Required //TODO From appsettings
-                }
-            );
-
-            //Add recipient list to this Event
-            var recipList = recipients.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries).ToList();
-            foreach (var item in recipList)
+            try
             {
+                var attendees = new List<Attendee>();
                 attendees.Add(
-                        new Attendee
+                    new Attendee
+                    {
+                        EmailAddress = new EmailAddress
                         {
-                            EmailAddress = new EmailAddress
-                            {
-                                Address = item,
-                                Name = item
-                            },
-                            Type = AttendeeType.Required //TODO From appsettings
-                        }
-                    );
-            }
+                            Address = me.Mail,
+                            Name = me.DisplayName
+                        },
+                        Type = AttendeeType.Required //TODO From appsettings
+                }
+                );
 
-            newEvent.Attendees = attendees;
+                //Add recipient list to this Event
+                var recipList = recipients.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                foreach (var item in recipList)
+                {
+                    attendees.Add(
+                            new Attendee
+                            {
+                                EmailAddress = new EmailAddress
+                                {
+                                    Address = item,
+                                    Name = item
+                                },
+                                Type = AttendeeType.Required //TODO From appsettings
+                        }
+                        );
+                }
+
+                newEvent.Attendees = attendees;
+            }
+            catch (Exception e) 
+            {
+                _logger.LogError(e.ToString());
+            }
 
             return newEvent;
         }
@@ -334,48 +379,56 @@ namespace NextechAREvents.Controllers
         /// <param name="meEmail"></param>
         /// <param name="newEvent"></param>
         /// <returns>The MS Graph Email</returns>
-        private static Message CreateMSGraphEmail(
+        private Message CreateMSGraphEmail(
             IWebHostEnvironment hostEnv, string recipients, string meEmail, Event newEvent)
         {
-            string path = hostEnv.WebRootPath ?? hostEnv.ContentRootPath;
-            string content = System.IO.File.ReadAllText(path + "/email_template.html"); //TODO Get email_template filename from appsettings
-
-            content = content.Replace("{Subject}", newEvent.Subject)
-                .Replace("{Start}", newEvent.Start.DateTime)
-                .Replace("{End}", newEvent.End.DateTime)
-                .Replace("{TimeZone}", newEvent.Start.TimeZone);
-
-            var recipList = recipients.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries).ToList();
-
-            var recipientList = recipList.Select(recipient => new Recipient
+            Message email = null;
+            try
             {
-                EmailAddress = new EmailAddress
-                {
-                    Address = recipient.Trim()
-                }
-            }).ToList();
+                string path = hostEnv.WebRootPath ?? hostEnv.ContentRootPath;
+                string content = System.IO.File.ReadAllText(path + "/email_template.html"); //TODO Get email_template filename from appsettings
 
-            recipientList.Add(
-                new Recipient
+                content = content.Replace("{Subject}", newEvent.Subject)
+                    .Replace("{Start}", newEvent.Start.DateTime)
+                    .Replace("{End}", newEvent.End.DateTime)
+                    .Replace("{TimeZone}", newEvent.Start.TimeZone);
+
+                var recipList = recipients.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                var recipientList = recipList.Select(recipient => new Recipient
                 {
                     EmailAddress = new EmailAddress
                     {
-                        Address = meEmail
+                        Address = recipient.Trim()
                     }
-                }
-            );
+                }).ToList();
 
-            // Build the email message.
-            var email = new Message
-            {
-                Body = new ItemBody
+                recipientList.Add(
+                    new Recipient
+                    {
+                        EmailAddress = new EmailAddress
+                        {
+                            Address = meEmail
+                        }
+                    }
+                );
+
+                // Build the email message.
+                email = new Message
                 {
-                    Content = content,
-                    ContentType = BodyType.Html,
-                },
-                Subject = $"Invitation to {newEvent.Subject}",
-                ToRecipients = recipientList
-            };
+                    Body = new ItemBody
+                    {
+                        Content = content,
+                        ContentType = BodyType.Html,
+                    },
+                    Subject = $"Invitation to {newEvent.Subject}",
+                    ToRecipients = recipientList
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.ToString());
+            }
 
             return email;
         }
@@ -413,30 +466,47 @@ namespace NextechAREvents.Controllers
         /// <param name="_clientId"></param>
         /// <param name="_clientSecret"></param>
         /// <returns>MS Graph user enumerable with users emails</returns>
-        private static async Task<IEnumerable<User>> GetUserList(string _tenantID, string _clientId, string _clientSecret)
+        private async Task<IEnumerable<User>> GetUserList(string _tenantID, string _clientId, string _clientSecret)
         {
-            GraphServiceClient graphServiceClient = GetGraphServiceClient(_tenantID, _clientId, _clientSecret);
+            try
+            {
+                GraphServiceClient graphServiceClient = GetGraphServiceClient(_tenantID, _clientId, _clientSecret);
 
-            IGraphServiceUsersCollectionPage users = await graphServiceClient.Users.Request()
-                                                      .Filter($"accountEnabled eq true")
-                                                      .Select("mail, displayName")
-                                                      .GetAsync();
-            return users;
+                IGraphServiceUsersCollectionPage users = await graphServiceClient.Users.Request()
+                                                          .Filter($"accountEnabled eq true")
+                                                          .Select("mail, displayName")
+                                                          .GetAsync();
+                return users;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.ToString());
+                return new List<User>();
+            }
         }
 
-        private static GraphServiceClient GetGraphServiceClient(string tenantID, string clientId, string clientSecret)
+        private GraphServiceClient GetGraphServiceClient(string tenantID, string clientId, string clientSecret)
         {
-            IConfidentialClientApplication confidentialClientApplication = ConfidentialClientApplicationBuilder
-                                                                            .Create(clientId)
-                                                                            .WithTenantId(tenantID)
-                                                                            .WithClientSecret(clientSecret)
-                                                                            .Build();
+            //TODO: Check if possible get the GraphServiceClient only one time in the contructor of this BaseController or create and pass as Dependency (Injection)
+            try
+            {
+                IConfidentialClientApplication confidentialClientApplication = ConfidentialClientApplicationBuilder
+                                                                                .Create(clientId)
+                                                                                .WithTenantId(tenantID)
+                                                                                .WithClientSecret(clientSecret)
+                                                                                .Build();
 
-            ClientCredentialProvider authProvider = new ClientCredentialProvider(confidentialClientApplication);
+                ClientCredentialProvider authProvider = new ClientCredentialProvider(confidentialClientApplication);
 
-            GraphServiceClient graphServiceClient = new GraphServiceClient(authProvider);
+                GraphServiceClient graphServiceClient = new GraphServiceClient(authProvider);
 
-            return graphServiceClient;
+                return graphServiceClient;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.ToString());
+                return null;
+            }
         }
 
     }
