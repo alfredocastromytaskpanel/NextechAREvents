@@ -189,8 +189,6 @@ namespace NextechAREvents.Controllers
         {
             //TODO Check if the Event already exists in the DB for the recipients
 
-            Event createdEvent = null;
-
             User me = await graphClient.Users[defaultOrganizerUserId].Request().GetAsync();
 
             // Get InfernoEvent info from Inferno WebAPI
@@ -199,25 +197,17 @@ namespace NextechAREvents.Controllers
                 return null;
 
             //Construct a MSGraph Event from InfernoEvent
-            string tzName = infernoEvent.startTime.GetTimeZoneStandardName();
+            //string tzName = infernoEvent.startTime.GetTimeZoneStandardName();
             Event newEvent = infernoEvent.ToMSGraphEvent();
 
             //Add default user and recipients as attendees to the MSGraph event
             newEvent = AddAttendees(newEvent, recipients, me);
-            tzName = "UTC";
 
-            try
-            {
-                createdEvent = await graphClient.Users[defaultOrganizerUserId]
+            createdEvent = await graphClient.Users[defaultOrganizerUserId]
                                             .Events
                                             .Request()
-                                            .Header("Prefer", $"outlook.timezone=\"{tzName}\"")
+                                            //.Header("Prefer", $"outlook.timezone=\"UTC\"")
                                             .AddAsync(newEvent);
-            }catch(Exception e)
-            {
-
-            }
-            
 
             return createdEvent;
         }

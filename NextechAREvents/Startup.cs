@@ -30,8 +30,8 @@ namespace NextechAREvents
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<EventContext>(options =>
-                //options.UseSqlite("Data Source=InfernoAREvents.db"));
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlite("Data Source=InfernoAREvents.db"));
+                //options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
             services.AddControllers();
 
@@ -51,6 +51,13 @@ namespace NextechAREvents
                 app.UseDeveloperExceptionPage();
             }
 
+            var serviceScopeFactory = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>();
+            using (var serviceScope = serviceScopeFactory.CreateScope())
+            {
+                var dbContext = serviceScope.ServiceProvider.GetService<EventContext>();
+                dbContext.Database.EnsureCreated();
+            }
+
             app.UseHttpsRedirection();
 
             // Enable middleware to serve generated Swagger as a JSON endpoint.
@@ -65,7 +72,7 @@ namespace NextechAREvents
 
             app.UseRouting();
 
-            app.UseAuthorization();
+            //app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
