@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using NextechAREvents.Data;
+using NextechAREvents.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +40,7 @@ namespace NextechAREvents
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             services.AddSwaggerGen();
+                        
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

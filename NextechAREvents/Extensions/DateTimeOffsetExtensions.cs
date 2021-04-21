@@ -12,7 +12,7 @@ namespace NextechAREvents.Extensions
             var timeZones = TimeZoneInfo.GetSystemTimeZones();
             var tz = timeZones.Where(x => x.GetUtcOffset(dtOffset.DateTime).Equals(dtOffset.Offset)).ToList();
             var tzInfo = tz.FirstOrDefault(x => x.DisplayName.Contains("US")) ?? tz.FirstOrDefault();
-            string tzName = tzInfo.StandardName;
+            string tzName = tzInfo.Id;
             tzName = tzName.Contains("UTC") ? "UTC" : tzName; //Linux returns UTC-H:MM time zone list
             return tzName;
         }

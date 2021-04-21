@@ -204,12 +204,20 @@ namespace NextechAREvents.Controllers
 
             //Add default user and recipients as attendees to the MSGraph event
             newEvent = AddAttendees(newEvent, recipients, me);
+            tzName = "UTC";
 
-            createdEvent = await graphClient.Users[defaultOrganizerUserId]
+            try
+            {
+                createdEvent = await graphClient.Users[defaultOrganizerUserId]
                                             .Events
                                             .Request()
                                             .Header("Prefer", $"outlook.timezone=\"{tzName}\"")
                                             .AddAsync(newEvent);
+            }catch(Exception e)
+            {
+
+            }
+            
 
             return createdEvent;
         }

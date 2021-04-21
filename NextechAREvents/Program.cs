@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using NextechAREvents.Service;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace NextechAREvents
 {
@@ -15,6 +17,7 @@ namespace NextechAREvents
         public static void Main(string[] args)
         {
             var logger = NLog.Web.NLogBuilder.ConfigureNLog("nlog.config").GetCurrentClassLogger();
+
             try
             {
                 logger.Warn("init main");
@@ -39,11 +42,16 @@ namespace NextechAREvents
                 {
                     webBuilder.UseStartup<Startup>();
                 })
+                .ConfigureServices(services =>
+                {
+                    services.AddHostedService<TimeHostedService>();
+                })
                 .ConfigureLogging(logging =>
                 {
                     logging.ClearProviders();
                     logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
                 })
                 .UseNLog();
+
     }
 }
