@@ -42,10 +42,10 @@ namespace NextechAREvents
                 {
                     webBuilder.UseStartup<Startup>();
                 })
-                .ConfigureServices(services =>
-                {
-                    services.AddHostedService<TimeHostedService>();
-                })
+                //.ConfigureServices(services =>
+                //{
+                //    services.AddHostedService<TimeHostedService>();
+                //})
                 .ConfigureLogging(logging =>
                 {
                     logging.ClearProviders();

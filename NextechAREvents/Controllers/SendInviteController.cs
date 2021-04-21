@@ -152,7 +152,7 @@ namespace NextechAREvents.Controllers
                     InfernoEventDTO infernoEvent = await GetInfernoEvent(infernoAPIUrl, infernoAPIKey, curEvent.InfernoEventId);
 
                     //If start or end times change
-                    if (infernoEvent != null && !curEvent.Start.Equals(infernoEvent.startTime.Date))
+                    if (infernoEvent != null && !curEvent.Start.Equals(infernoEvent.startTime.DateTime))
                     {
                         Event updatedEvent = await UpdateEventAndSendEmail(curEvent, infernoEvent);
                         if (updatedEvent != null)

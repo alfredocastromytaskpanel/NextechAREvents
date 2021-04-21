@@ -9,22 +9,23 @@ using NextechAREvents.Controllers;
 using System.Net.Http;
 using Newtonsoft.Json;
 using NextechAREvents.DTO;
+using System.IO;
 
 namespace NextechAREvents.Service
 {
     public class TimeHostedService : IHostedService, IDisposable
     {
         private Timer _timer;
+        private ILogger<TimeHostedService> _logger;
 
-        public void TimedHostedService()
+        public void TimedHostedService(ILogger<TimeHostedService> logger)
         {
-
+            this._logger = logger;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            //_timer = new Timer(DoWork, null, TimeSpan.Zero,
-            //    TimeSpan.FromSeconds(5));
+            _timer = new Timer(DoWork, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
             return Task.CompletedTask;
         }
@@ -38,11 +39,12 @@ namespace NextechAREvents.Service
             {
 
                 List<EventDTO> eventList = new List<EventDTO>();
+                List<EventDTO> eventListDel = new List<EventDTO>();
                 try
                 {
+                    //Warning!! Put here the Url for this WebAPI
                     //"https://localhost:5001"
                     var response = httpClient.GetAsync("https://localhost:44331/api/SendInvite/updateevents").Result;
-
                     var status = response.IsSuccessStatusCode;
                     if (status)
                     {
@@ -50,11 +52,39 @@ namespace NextechAREvents.Service
                         eventList = JsonConvert.DeserializeObject<List<EventDTO>>(content);
                     }
 
-                    Console.WriteLine(string.Format("Status: {0}. {1} Events updated", status ? "OK": "Fail", eventList.Count));
+                    //Warning!! Put here the Url for this WebAPI
+                    //"https://localhost:5001"
+                    var responseDel = httpClient.DeleteAsync("https://localhost:44331/api/SendInvite").Result;
+                    var statusDel = responseDel.IsSuccessStatusCode;
+                    if (statusDel)
+                    {
+                        var content = responseDel.Content.ReadAsStringAsync().Result;
+                        eventListDel = JsonConvert.DeserializeObject<List<EventDTO>>(content);
+                    }
+
+                    string msg = string.Format("Polling Update - DateTime: {0} - Status: {1}. {2} Events updated", DateTime.Now.ToString(), status ? "OK" : "Fail", eventList.Count);
+                    string msgDel = string.Format("Polling Delete - DateTime: {0} - Status: {1}. {2} Events Deleted", DateTime.Now.ToString(), status ? "OK" : "Fail", eventListDel.Count);
+
+                    if (_logger != null)
+                        _logger.LogInformation(msg, msgDel);
+
+                    try
+                    {
+                        string[] lines = { msg, msgDel };
+                        File.AppendAllLines("PollingTaskLog.txt", lines);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_logger != null)
+                            _logger.LogError(ex.ToString());
+                    }
+
+                    Console.WriteLine(msg);
                 }
                 catch (Exception e)
                 {
-                    
+                    if (_logger != null)
+                        _logger.LogError(e.ToString());
                 }
             }
         }

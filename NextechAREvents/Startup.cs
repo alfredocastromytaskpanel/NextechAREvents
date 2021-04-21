@@ -39,6 +39,8 @@ namespace NextechAREvents
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+            services.AddHostedService<TimeHostedService>();
+
             services.AddSwaggerGen();
                         
         }
