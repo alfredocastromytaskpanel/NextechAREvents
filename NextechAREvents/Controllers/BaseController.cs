@@ -50,13 +50,10 @@ namespace NextechAREvents.Controllers
             this._configuration = configuration;
             this._logger = logger;
 
-            _graphEndpoint = _configuration.GetValue<string>("AzureAd:GraphAPI");
-
-            _defaultOrganizerUserId = _configuration.GetValue<string>("DefaultOrganizerUserId");
-
             _infernoAPIUrl = _configuration.GetValue<string>("InfernoAPIUrl");
             _infernoAPIKey = _configuration.GetValue<string>("InfernoAPIKey");
 
+            _defaultOrganizerUserId = _configuration.GetValue<string>("AzureAd:DefaultOrganizerUserId");
             _clientId = _configuration.GetValue<string>("AzureAd:ClientId");
             _tenantID = _configuration.GetValue<string>("AzureAd:TenantId");
             _clientSecret = _configuration.GetValue<string>("AzureAd:ClientSecret");
@@ -70,15 +67,13 @@ namespace NextechAREvents.Controllers
         /// <returns>The created MS Graph event</returns>
         protected async Task<Event> CreateEventAndSendEmail(string eventId, string recipients)
         {
-
             Event newEvent = null;
-
             try
             {
                 GraphServiceClient graphClient = GetGraphServiceClient(_tenantID, _clientId, _clientSecret);
 
                 //Get Event From Inferno API and create, then create MSGraph Event and send Email invitation using MSGraph API
-                newEvent = await CreateEvent(graphClient, _hostEnv, _graphEndpoint, _infernoAPIUrl, _infernoAPIKey, _defaultOrganizerUserId, eventId, recipients);
+                newEvent = await CreateEvent(graphClient, _hostEnv, _infernoAPIUrl, _infernoAPIKey, _defaultOrganizerUserId, eventId, recipients);
 
                 if (newEvent != null)
                 {
@@ -183,14 +178,13 @@ namespace NextechAREvents.Controllers
         /// </summary>
         /// <param name="graphClient"></param>
         /// <param name="hostEnv"></param>
-        /// <param name="graphEndpoint"></param>
         /// <param name="infernoAPIKey"></param>
         /// <param name="eventId"></param>
         /// <param name="recipients"></param>
         /// <returns>The created MS Graph event</returns>
         private static async Task<Event> CreateEvent(
             GraphServiceClient graphClient, IWebHostEnvironment hostEnv,
-            string graphEndpoint, string infernoAPIUrl, string infernoAPIKey, string defaultOrganizerUserId, 
+            string infernoAPIUrl, string infernoAPIKey, string defaultOrganizerUserId, 
             string eventId, string recipients)
         {
             //TODO Check if the Event already exists in the DB for the recipients
