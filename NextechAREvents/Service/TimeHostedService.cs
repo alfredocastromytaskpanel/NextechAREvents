@@ -99,6 +99,6 @@ namespace NextechAREvents.Service
         public void Dispose()
         {
             _timer?.Dispose();
-        }       
+        }
     }
 }
