@@ -44,7 +44,8 @@ namespace NextechAREvents.Service
                 {
                     //Warning!! Put here the Url for this WebAPI
                     //"https://localhost:5001"
-                    var response = httpClient.GetAsync("https://localhost:44331/api/SendInvite/updateevents").Result;
+                    String url = "http://localhost";
+                    var response = httpClient.GetAsync(url+"/api/SendInvite/updateevents").Result;
                     var status = response.IsSuccessStatusCode;
                     if (status)
                     {
@@ -54,7 +55,7 @@ namespace NextechAREvents.Service
 
                     //Warning!! Put here the Url for this WebAPI
                     //"https://localhost:5001"
-                    var responseDel = httpClient.DeleteAsync("https://localhost:44331/api/SendInvite").Result;
+                    var responseDel = httpClient.DeleteAsync(url + "/api/SendInvite").Result;
                     var statusDel = responseDel.IsSuccessStatusCode;
                     if (statusDel)
                     {
