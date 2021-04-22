@@ -83,7 +83,7 @@ namespace NextechAREvents.Controllers
                     await _unitOfWork.EventRepository.InsertAsync(dbEvent);
 
                     //Create and send Email invitation using MSGraph API
-                    await SendEmail(graphClient, _hostEnv, newEvent, _defaultOrganizerUserId, recipients, dbEvent.OrganizerEmail);
+                    //await SendEmail(graphClient, _hostEnv, newEvent, _defaultOrganizerUserId, recipients, dbEvent.OrganizerEmail);
                 }
             }
             catch (Exception e)
