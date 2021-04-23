@@ -30,8 +30,8 @@ namespace NextechAREvents
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<EventContext>(options =>
-                options.UseSqlite("Data Source=InfernoAREvents.db"));
-                //options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+                //options.UseSqlite("Data Source=InfernoAREvents.db"));
+                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
             services.AddControllers();
 

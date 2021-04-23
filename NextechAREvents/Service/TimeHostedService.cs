@@ -42,19 +42,14 @@ namespace NextechAREvents.Service
                 List<EventDTO> eventListDel = new List<EventDTO>();
                 try
                 {
-                    //Warning!! Put here the Url for this WebAPI
-                    //"https://localhost:5001"
-                    String url = "http://localhost";
-                    var response = httpClient.GetAsync(url+"/api/SendInvite/updateevents").Result;
+                    string url = "http://localhost";
+                    var response = httpClient.GetAsync(url + "/api/SendInvite/updateevents").Result;
                     var status = response.IsSuccessStatusCode;
                     if (status)
                     {
                         var content = response.Content.ReadAsStringAsync().Result;
                         eventList = JsonConvert.DeserializeObject<List<EventDTO>>(content);
                     }
-
-                    //Warning!! Put here the Url for this WebAPI
-                    //"https://localhost:5001"
                     var responseDel = httpClient.DeleteAsync(url + "/api/SendInvite").Result;
                     var statusDel = responseDel.IsSuccessStatusCode;
                     if (statusDel)

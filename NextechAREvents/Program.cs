@@ -52,6 +52,5 @@ namespace NextechAREvents
                     logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
                 })
                 .UseNLog();
-
     }
 }
