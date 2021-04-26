@@ -98,3 +98,22 @@ When you start the Web API from Visual Studio, depending on the browser you use,
 
 ![swagger](./ReadmeFiles/SwaggerIndex.png)
 
+### DB considerations
+
+1. You must have remote access enabled in SQLServer.
+2. You must have a username and password configured for the login.
+3. In the 'appsettings' you should have a Connection String similar to this 
+"Server=[IP example-> 10.10.10.5];Database=InfernoAREvents;User Id=[user];Password=[pass];"
+4. This may vary based on the version of the SQLServer and where the DB service is located.
+
+### Deploy Docker Image
+
+1. Go to the repository directory where the Dockerfile is located (/NextechAREvents)
+2. Execute -> docker build . -t nextech_events
+3. Execute -> docker run -d --name nextech_image -p [EXTENAL PORT]:80 -v [STATIC PATH OF THE FILE APPSETTINGS]/appsettings.json:/App/appsettings.json nextech_events
+    Example: docker run -d --name nextech_image -p 80:80 -v /home/events/appsettings.json:/App/appsettings.json nexttech_events
+
+
+
+
+
