@@ -134,10 +134,10 @@ namespace NextechAREvents.Controllers
                     curEvent.ModifiedDate = DateTime.UtcNow;
                     await _unitOfWork.EventRepository.UpdateAsync(curEvent);
 
-                    string recipients = string.Join(";", eventUpdated.Attendees.Select(x => x.EmailAddress.Address).ToList());
+                    //string recipients = string.Join(";", eventUpdated.Attendees.Select(x => x.EmailAddress.Address).ToList());
 
                     //Create and send Email invitation using MSGraph API
-                    await SendEmail(graphClient, _hostEnv, eventUpdated, _defaultOrganizerUserId, recipients, curEvent.OrganizerEmail);
+                    //await SendEmail(graphClient, _hostEnv, eventUpdated, _defaultOrganizerUserId, recipients, curEvent.OrganizerEmail);
                 }
             }
             catch (Exception e)
@@ -163,9 +163,9 @@ namespace NextechAREvents.Controllers
                 string eventId = curEvent.MSGraphEventId;
 
                 await graphClient.Users[_defaultOrganizerUserId]
-                                 .Events[eventId]
-                                 .Request()
-                                 .DeleteAsync();
+                                    .Events[eventId]
+                                    .Request()
+                                    .DeleteAsync();
 
                 await _unitOfWork.EventRepository.DeleteAsync(curEvent);
 
@@ -173,7 +173,10 @@ namespace NextechAREvents.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e.ToString());
+                if (e.Message.StartsWith("Code: ErrorItemNotFound")) //The Event was already deleted
+                    await _unitOfWork.EventRepository.DeleteAsync(curEvent);
+                else
+                    _logger.LogError(e.ToString());
             }
             return false;
         }

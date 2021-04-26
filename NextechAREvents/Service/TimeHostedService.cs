@@ -43,6 +43,7 @@ namespace NextechAREvents.Service
                 try
                 {
                     string url = "http://localhost";
+                    //string url = "https://localhost:44331"; //For DEBUG
                     var response = httpClient.GetAsync(url + "/api/SendInvite/updateevents").Result;
                     var status = response.IsSuccessStatusCode;
                     if (status)

@@ -24,6 +24,7 @@ using NextechAREvents.Extensions;
 using NextechAREvents.Models;
 using NextechAREvents.DTO;
 using NextechAREvents.Data;
+using TimeZoneConverter;
 
 namespace NextechAREvents.Controllers
 {
@@ -200,13 +201,23 @@ namespace NextechAREvents.Controllers
 
                 foreach (var curEvent in allEventList)
                 {
-                    TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(curEvent.TimeZone);
-                    DateTime endUTC = TimeZoneInfo.ConvertTimeToUtc(curEvent.End, timeZone);
+
+
+                    ////Production Warning!!!!
+                    ////For this POC demo events will be deleted after 1 hour they are created
+                    ////For production, the real criteria must consider the 'End' DateTime instead 'CreateDate' property
+                    
+                    //TimeZoneInfo timeZone = TZConvert.GetTimeZoneInfo(curEvent.TimeZone);
+                    //DateTime endUTC = TimeZoneInfo.ConvertTimeToUtc(curEvent.End, timeZone); 
+
+                    DateTime endUTC = curEvent.CreatedDate; 
+                    
                     DateTime curUTC = DateTime.UtcNow;
 
                     //If the event is expired 1 hour ago
                     if (endUTC.AddHours(1) < curUTC)
                     {
+                        //Delete MS Graph Event
                         bool isDeleted = await DeleteEvent(curEvent);
 
                         if (isDeleted)
