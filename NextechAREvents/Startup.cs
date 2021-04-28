@@ -30,7 +30,6 @@ namespace NextechAREvents
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<EventContext>(options =>
-                //options.UseSqlite("Data Source=InfernoAREvents.db"));
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
             services.AddControllers();
@@ -41,8 +40,10 @@ namespace NextechAREvents
 
             services.AddHostedService<TimeHostedService>();
 
-            services.AddSwaggerGen();
-                        
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "NextechAR Events", Version = "v1" });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -62,19 +63,12 @@ namespace NextechAREvents
 
             app.UseHttpsRedirection();
 
-            // Enable middleware to serve generated Swagger as a JSON endpoint.
             app.UseSwagger();
-
-            // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.),
-            // specifying the Swagger JSON endpoint.
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "NextechAR Events API V1");
-            });
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "NextechAR Events API v1"));
 
             app.UseRouting();
 
-            //app.UseAuthorization();
+            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
