@@ -108,10 +108,9 @@ When you start the Web API from Visual Studio, depending on the browser you use,
 
 ### Deploy Docker Image
 
-1. Go to the repository directory where the Dockerfile is located (/NextechAREvents)
-2. Execute -> docker build . -t nextech_events
-3. Execute -> docker run -d --name nextech_image -p [EXTENAL PORT]:80 -v [STATIC PATH OF THE FILE APPSETTINGS]/appsettings.json:/App/appsettings.json nextech_events
-    Example: docker run -d --name nextech_image -p 80:80 -v /home/events/appsettings.json:/App/appsettings.json nexttech_events
+1. Go to the repository directory(/)
+2. docker build . -t nextech
+3. docker run -d --name nextech -p 80:80 -p 443:443 nextech
 
 
 
