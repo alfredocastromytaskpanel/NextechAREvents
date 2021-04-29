@@ -10,7 +10,7 @@ using NextechAREvents.Data;
 namespace NextechAREvents.Migrations
 {
     [DbContext(typeof(EventContext))]
-    [Migration("20210427015457_Init")]
+    [Migration("20210428235823_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
